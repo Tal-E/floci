@@ -1228,6 +1228,26 @@ class ResourceArnBuilderTest {
         assertEquals("arn:aws:s3:::my-bucket/folder/", arn);
     }
 
+    // ── The vendored table of request resources ─────────────────────────────────
+
+    /**
+     * A namespace with no branch here is checked on the resources the vendored table finds in its request for the
+     * operation it is dispatched as, and on {@code *} without one or for an operation of another namespace.
+     */
+    @Test
+    void aNamespaceWithNoBranchIsCheckedOnTheResourcesItsRequestNames() {
+        when(ctx.getMethod()).thenReturn("POST");
+        setJsonBody("{\"UserPoolId\":\"us-east-1_abc\"}");
+        assertEquals(List.of("arn:aws:cognito-idp:us-east-1:000000000000:userpool/us-east-1_abc"), builder.buildResources(
+                "cognito-idp", "cognito-idp:DescribeUserPool", ctx, "us-east-1", "000000000000", "aws"));
+        assertEquals(List.of("*"), builder.buildResources("cognito-idp", ctx, "us-east-1", "000000000000"));
+        assertEquals(List.of("*"), builder.buildResources("glue", "cognito-idp:DescribeUserPool", ctx, "us-east-1",
+                "000000000000", "aws"));
+        setJsonBody("{}");
+        assertEquals(List.of("*"), builder.buildResources("cognito-idp", "cognito-idp:DescribeUserPool", ctx,
+                "us-east-1", "000000000000", "aws"));
+    }
+
     // ── Lambda ──────────────────────────────────────────────────────────────────
 
     @Test

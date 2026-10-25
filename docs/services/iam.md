@@ -1421,6 +1421,36 @@ requests. REST-JSON requests return HTTP 403 `AccessDeniedException`; AWS Query 
 requests retain HTTP 403 XML `AccessDenied` responses. The routed protocol determines
 the status, not just the request's content type.
 
+A request is checked against the resources it names. Floci builds their ARNs itself for S3, Lambda,
+SQS, SNS, DynamoDB, Kinesis, SSM, KMS, IAM, Resource Groups, EventBridge Scheduler, EventBridge
+Pipes, Aurora DSQL, EKS, CloudWatch Logs, Secrets Manager and STS. For Elastic Load Balancing, ECR,
+Step Functions and Amazon Cognito user pools they come from a table generated from AWS's Service
+Reference and botocore, `src/main/resources/aws/iam-request-resources.json`, which gives each
+operation's action, the resource types that action acts on with their ARN formats, and the request
+members that name them: a member holding a resource's ARN, which counts when it matches the format
+of a type the action acts on, or members filling the variables of a type's format. A variable the
+request does not fill is `*`, as the service mints a new resource's id, so `CreateTargetGroup` is
+checked on `targetgroup/<Name>/*`; a v2 `CreateLoadBalancer` is checked on the load balancer of its
+`Type`, `loadbalancer/app/<Name>/*` when it gives none. The members read are those of the
+operation the request is dispatched as, the one its action is checked as (the Query `Action`, the
+JSON `X-Amz-Target`, or the operation in a Smithy RPC v2 path), so an `X-Amz-Target` an RPC v2
+request also carries names nothing, and as its handler reads them: a list only from a list, so
+`DescribeRepositories` with a single name for `repositoryNames`, which ECR's handler reads as none
+and answers with every repository, names no repository, and a number or a null as its text. A
+member whose botocore shape is an account id gives the account the type is in: ECR's `registryId`
+selects the registry its handler acts in, so `repository/<name>` is checked in that account, and a
+`registryId` that is no account id names no repository. `StartExecution` and
+`StartSyncExecution` take Step Functions Local's `<stateMachineArn>#<test case>` and run the
+machine before the `#`, so that machine is the one checked. An ARN naming another account or
+Region than the request's is checked as given and as each resource of that name a handler may act
+on instead, in the ARN's account or the caller's and in the ARN's Region or the request's (ECR's
+tag handlers keep the ARN's account in the request's Region), and the request is refused if any is
+denied. Every other request is checked on `*`, as is an operation whose action acts on no
+resource type or whose request names none, where AWS checks `*` too. `make
+iam-request-resources-check` re-derives the table from the pinned botocore, `make
+iam-request-resources-verify` checks it against AWS, and the namespaces it does not read yet are
+listed in it with their reason.
+
 A REST request is authorized as the operation of the route it reached. An `X-Amz-Target` header, a
 Query `Action` field or a `smithy-protocol` header on it does not change the action it is checked
 as, and its path is matched still percent-encoded, as the router matches it, so an encoded `/`
@@ -1732,7 +1762,15 @@ tagged: an instance's on `arn:aws:ec2:<Region>:<account>:instance/*`, from the A
 Reference gives the type. Other tags are checked on the resources the operation itself is checked
 on: Lambda's `CreateFunction` is checked on the function its body names, in the caller's account and
 Region, as the Service Reference gives it the `function` resource, so a function's tags are checked
-there too. Where the tagging action takes
+there too, and a create of a service the table of request resources reads is checked on the resource
+it creates (a target group on `targetgroup/<Name>/*`, an application load balancer on
+`loadbalancer/app/<Name>/*`). A create of a resource under a parent its action acts on tags the new
+resource, so its tags are checked on that one, built from the parent's ARN with its own id open:
+`CreateListener` acts on a load balancer and its tags are checked on
+`listener/app/<load balancer name>/<load balancer id>/*`, and `CreateRule`'s on the new
+`listener-rule/...` under its listener. So the AWS Load Balancer Controller's policy, which allows
+`AddTags` at creation only on target groups and application and network load balancers, and on
+listeners and rules, holds. Where the tagging action takes
 its namespace's `CreateAction` key, as `ec2:CreateTags`, `ecs:TagResource`, CloudFormation's
 `TagResource` and Elastic Load Balancing's `AddTags` do, the key is the operation's name:
 `ec2:CreateAction` is `RunInstances` for an instance launched with tags. The operation's own action

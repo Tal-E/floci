@@ -68,7 +68,8 @@ PREFIX ?= $(HOME)/.local
         cfn-property-types-sync cfn-property-types-check cfn-property-types-verify cfn-property-types-test \
         iam-authorized-actions-verify iam-authorized-actions-test iam-passed-roles-sync iam-passed-roles-check \
         iam-passed-roles-verify iam-passed-roles-test iam-tag-on-create-sync iam-tag-on-create-check \
-        iam-tag-on-create-verify iam-tag-on-create-test iam-data-verify
+        iam-tag-on-create-verify iam-tag-on-create-test iam-request-resources-sync iam-request-resources-check \
+        iam-request-resources-verify iam-request-resources-test iam-data-verify
 
 help: ## List the targets below
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -318,6 +319,7 @@ aws-data-check: ## CI gate: the vendored AWS data must match a fresh generation
 	}
 	@$(MAKE) --no-print-directory iam-passed-roles-check
 	@$(MAKE) --no-print-directory iam-tag-on-create-check
+	@$(MAKE) --no-print-directory iam-request-resources-check
 
 aws-data-test: ## Run the AWS data generators' unit tests
 	$(PYTHON) -m pytest tools/aws -q
@@ -378,14 +380,15 @@ iam-data-verify: ## CI gate (online): every vendored IAM file must still match A
 	@# Both halves run even when the first fails, so one file's drift cannot hide the other's
 	@# state. Sequential steps in CI stop at the first failure, which once left the action
 	@# resource gate unexercised while the namespace list was stale.
-	@namespaces=0; actions=0; authorized=0; passed=0; tagged=0; \
+	@namespaces=0; actions=0; authorized=0; passed=0; tagged=0; requested=0; \
 	$(MAKE) --no-print-directory iam-namespaces-verify || namespaces=$$?; \
 	$(MAKE) --no-print-directory iam-action-resources-verify || actions=$$?; \
 	$(MAKE) --no-print-directory iam-authorized-actions-verify || authorized=$$?; \
 	$(MAKE) --no-print-directory iam-passed-roles-verify || passed=$$?; \
 	$(MAKE) --no-print-directory iam-tag-on-create-verify || tagged=$$?; \
+	$(MAKE) --no-print-directory iam-request-resources-verify || requested=$$?; \
 	if [ $$namespaces -ne 0 ] || [ $$actions -ne 0 ] || [ $$authorized -ne 0 ] || [ $$passed -ne 0 ] \
-			|| [ $$tagged -ne 0 ]; then \
+			|| [ $$tagged -ne 0 ] || [ $$requested -ne 0 ]; then \
 		echo ""; \
 		echo "error: vendored IAM data does not match upstream:"; \
 		if [ $$namespaces -ne 0 ]; then \
@@ -402,6 +405,9 @@ iam-data-verify: ## CI gate (online): every vendored IAM file must still match A
 		fi; \
 		if [ $$tagged -ne 0 ]; then \
 			echo "       the table of the tagging actions creates need, see its message above"; \
+		fi; \
+		if [ $$requested -ne 0 ]; then \
+			echo "       the table of the resources requests name, see its message above"; \
 		fi; \
 		exit 1; \
 	fi
@@ -490,6 +496,34 @@ iam-tag-on-create-verify: ## CI gate (online): every vendored operation must sti
 
 iam-tag-on-create-test: ## Run the IAM tag-on-create generator's unit tests
 	$(PYTHON) -m pytest tools/aws/test_regen_iam_tag_on_create.py -q
+
+iam-request-resources-sync: ## Regenerate src/main/resources/aws/iam-request-resources.json from AWS and botocore (commit the result)
+	$(PYTHON) tools/aws/regen_iam_request_resources.py
+
+iam-request-resources-check: ## CI gate (offline): every vendored operation's resources must be what the pinned botocore gives
+	@$(PYTHON) tools/aws/regen_iam_request_resources.py --check || { \
+		echo ""; \
+		echo "error: src/main/resources/aws/iam-request-resources.json is malformed or out of date."; \
+		echo "       Run 'make iam-request-resources-sync' and commit the result."; \
+		exit 1; \
+	}
+
+iam-request-resources-verify: ## CI gate (online): every vendored operation must still be checked on the resource types AWS gives
+	@$(PYTHON) tools/aws/regen_iam_request_resources.py --verify; status=$$?; \
+	if [ $$status -eq 2 ]; then \
+		echo ""; \
+		echo "error: could not reach AWS's service reference, so nothing was verified."; \
+		exit 1; \
+	elif [ $$status -ne 0 ]; then \
+		echo ""; \
+		echo "error: the vendored table checks an operation as an action, or on resource types or"; \
+		echo "       ARN formats, AWS does not give it."; \
+		echo "       Run 'make iam-request-resources-sync' and commit the result."; \
+		exit 1; \
+	fi
+
+iam-request-resources-test: ## Run the IAM request resource generator's unit tests
+	$(PYTHON) -m pytest tools/aws/test_regen_iam_request_resources.py -q
 
 cfn-property-types-sync: ## Regenerate src/main/resources/aws/cfn-property-types.json from AWS's resource schemas (commit the result)
 	$(PYTHON) tools/aws/regen_cfn_property_types.py

@@ -6,6 +6,7 @@ import io.github.hectorvent.floci.core.common.AwsArnUtils;
 import io.github.hectorvent.floci.core.common.AwsException;
 import io.github.hectorvent.floci.core.common.AwsQueryServiceResolver;
 import io.github.hectorvent.floci.core.common.AwsRegions;
+import io.github.hectorvent.floci.core.common.RequestResources;
 import io.github.hectorvent.floci.core.common.ServicePrincipals;
 import io.github.hectorvent.floci.core.common.SigV4CredentialScope;
 import io.github.hectorvent.floci.services.cloudwatch.logs.LogGroupTagTarget;
@@ -124,6 +125,16 @@ public class ResourceArnBuilder {
      */
     public List<String> buildResources(String credentialScope, ContainerRequestContext ctx,
                                        String region, String accountId, String partition) {
+        return buildResources(credentialScope, null, ctx, region, accountId, partition);
+    }
+
+    /**
+     * The resources a request is checked against, {@code operation} the one it is dispatched as, as
+     * {@code <namespace>:<Operation>}: a namespace with no branch here is checked on the resources its request
+     * names for that operation (see {@link RequestResources}), and on {@code *} without one.
+     */
+    public List<String> buildResources(String credentialScope, String operation, ContainerRequestContext ctx,
+                                       String region, String accountId, String partition) {
         if (credentialScope == null) {
             return List.of("*");
         }
@@ -143,8 +154,20 @@ public class ResourceArnBuilder {
             case "pipes"          -> List.of(buildPipesArn(path, ctx, region, accountId, partition));
             case "dsql"           -> List.of(buildDsqlArn(path, ctx, region, accountId, partition));
             case "eks"            -> List.of(buildEksArn(path, ctx, region, accountId));
-            default               -> List.of("*");
+            default               -> namedResources(credentialScope, operation, ctx, region, accountId, partition);
         };
+    }
+
+    /**
+     * The resources a request of a namespace this builder has no branch for names, from the vendored table of
+     * request resources (see {@link RequestResources}); {@code *} when it names none, or the operation is not one
+     * of the namespace.
+     */
+    private static List<String> namedResources(String credentialScope, String operation, ContainerRequestContext ctx,
+                                               String region, String accountId, String partition) {
+        List<String> named = operation == null || !operation.startsWith(credentialScope + ":") ? List.of()
+                : RequestResources.of(operation, ctx, partition, region, accountId);
+        return named.isEmpty() ? List.of("*") : named;
     }
 
     private String buildResourceGroupArn(ContainerRequestContext ctx, String region, String accountId) {
