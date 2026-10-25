@@ -97,8 +97,11 @@ public class IamEnforcementFilter implements ContainerRequestFilter {
     private static final String S3_INVALID_ACCESS_KEY_ID =
             "The AWS Access Key Id you provided does not exist in our records.";
 
-    /** AWS's wording for temporary credentials past their expiration. */
-    private static final String EXPIRED_TOKEN = "The security token included in the request has expired.";
+    /**
+     * AWS's wording for temporary credentials past their expiration, shared with an operation that
+     * finds the session gone after this filter has let the request through.
+     */
+    public static final String EXPIRED_TOKEN = "The security token included in the request has expired.";
 
     /** S3's wording for the same. */
     private static final String S3_EXPIRED_TOKEN = "The provided token has expired.";

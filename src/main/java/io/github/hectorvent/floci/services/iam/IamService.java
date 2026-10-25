@@ -3092,6 +3092,18 @@ public class IamService implements SessionAccountLookup, ResourceProvider {
         }
     }
 
+    /**
+     * The account's federation state while the feature is on, for a caller that answers its own
+     * refusal rather than IAM's: STS turns a token request down with
+     * {@code OutboundWebIdentityFederationDisabledException}, not with {@code FeatureDisabled}.
+     */
+    public Optional<OutboundWebIdentityFederation> findEnabledOutboundWebIdentityFederation() {
+        synchronized (outboundFederationLock) {
+            return outboundFederation.get(OUTBOUND_FEDERATION_KEY)
+                    .filter(OutboundWebIdentityFederation::isEnabled);
+        }
+    }
+
     /** The issuer URL and whether JWT vending is on, which it is while the feature is enabled. */
     public OutboundWebIdentityFederation getOutboundWebIdentityFederationInfo() {
         synchronized (outboundFederationLock) {
@@ -4531,6 +4543,15 @@ public class IamService implements SessionAccountLookup, ResourceProvider {
         return currentSession(accessKeyId)
                 .map(SessionCredential::getSessionToken)
                 .filter(token -> !token.isBlank());
+    }
+
+    /**
+     * When the session a temporary access key belongs to expires, for callers that must not hand
+     * out something outliving it. Empty for a long-term key, which names no session, and for a
+     * session already expired, which no longer resolves.
+     */
+    public Optional<Instant> findSessionExpiration(String accessKeyId) {
+        return currentSession(accessKeyId).map(SessionCredential::getExpiration);
     }
 
     /** Whether an access key ID identifies Floci's documented public deployer credential. */
