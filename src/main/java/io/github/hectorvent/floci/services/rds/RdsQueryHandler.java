@@ -1,6 +1,7 @@
 package io.github.hectorvent.floci.services.rds;
 
 import io.github.hectorvent.floci.config.EmulatorConfig;
+import io.github.hectorvent.floci.core.common.AwsArnUtils;
 import io.github.hectorvent.floci.core.common.AwsErrorMessages;
 import io.github.hectorvent.floci.core.common.AwsException;
 import io.github.hectorvent.floci.core.common.AwsNamespaces;
@@ -3306,16 +3307,7 @@ public class RdsQueryHandler {
             return fallbackSubnetGroup(instance, "default", "default subnet group");
         }
         return service.getDbSubnetGroup(
-                groupName, regionFromRdsArn(instance.getDbInstanceArn()));
-    }
-
-    private String regionFromRdsArn(String arn) {
-        if (arn == null || arn.isBlank()) {
-            return config.defaultRegion();
-        }
-        String[] parts = arn.split(":", 6);
-        return parts.length == 6 && !parts[3].isBlank()
-                ? parts[3] : config.defaultRegion();
+                groupName, AwsArnUtils.regionOrDefault(instance.getDbInstanceArn(), config.defaultRegion()));
     }
 
     private DbSubnetGroup fallbackSubnetGroup(DbInstance instance, String name, String description) {
@@ -3338,14 +3330,12 @@ public class RdsQueryHandler {
 
     private static String subnetGroupArnForInstance(DbInstance instance, String name) {
         String arn = instance.getDbInstanceArn();
-        if (arn == null || arn.isBlank()) {
+        if (!AwsArnUtils.isArn(arn)) {
             return null;
         }
-        String[] parts = arn.split(":", 6);
-        if (parts.length < 6) {
-            return null;
-        }
-        return String.join(":", parts[0], parts[1], parts[2], parts[3], parts[4], "subgrp:" + name);
+        AwsArnUtils.Arn parsed = AwsArnUtils.parse(arn);
+        return new AwsArnUtils.Arn(parsed.partition(), parsed.service(), parsed.region(), parsed.accountId(),
+                "subgrp:" + name).toString();
     }
 
     private String paramGroupInnerXml(DbParameterGroup g) {

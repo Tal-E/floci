@@ -1757,7 +1757,7 @@ public class RdsService implements Resettable, ResourceProvider {
      * Region as the linking instance, an ARN names one anywhere in the account.
      */
     private DbInstance findLinkedInstance(String accountId, DbInstance from, String linkName) {
-        if (linkName.startsWith("arn:")) {
+        if (AwsArnUtils.isArn(linkName)) {
             for (DbInstance candidate : instances.scan(k -> true)) {
                 if (linkName.equalsIgnoreCase(candidate.getDbInstanceArn())
                         && accountId.equals(accountIdFromArn(candidate.getDbInstanceArn()))) {
@@ -1787,7 +1787,7 @@ public class RdsService implements Resettable, ResourceProvider {
                     .equalsIgnoreCase(replica.getReadReplicaSourceDbInstanceIdentifier())) {
                 continue;
             }
-            if (replicaName.startsWith("arn:")) {
+            if (AwsArnUtils.isArn(replicaName)) {
                 replica.setReadReplicationStatus(READ_REPLICATION_TERMINATED);
             } else {
                 replica.setReadReplicaSourceDbInstanceIdentifier(null);
@@ -2625,7 +2625,7 @@ public class RdsService implements Resettable, ResourceProvider {
     }
 
     private String resourceRegionOrDefault(String resourceName) {
-        return resourceName != null && resourceName.startsWith("arn:")
+        return AwsArnUtils.isArn(resourceName)
                 ? regionFromArn(resourceName) : regionResolver.getDefaultRegion();
     }
 
@@ -2918,7 +2918,7 @@ public class RdsService implements Resettable, ResourceProvider {
         Map<String, DbInstance> unique = new LinkedHashMap<>();
         for (DbInstance instance : instances.scan(k -> true)) {
             boolean matchesFilter = filterId == null || filterId.isBlank()
-                    || (filterId.startsWith("arn:")
+                    || (AwsArnUtils.isArn(filterId)
                     ? filterId.equalsIgnoreCase(instance.getDbInstanceArn())
                     : instance.getDbInstanceIdentifier().equalsIgnoreCase(filterId));
             if (matchesFilter
@@ -4938,7 +4938,7 @@ public class RdsService implements Resettable, ResourceProvider {
         Map<String, DbCluster> unique = new LinkedHashMap<>();
         for (DbCluster cluster : clusters.scan(k -> true)) {
             boolean matchesFilter = filterId == null || filterId.isBlank()
-                    || (filterId.startsWith("arn:")
+                    || (AwsArnUtils.isArn(filterId)
                     ? filterId.equalsIgnoreCase(cluster.getDbClusterArn())
                     : cluster.getDbClusterIdentifier().equalsIgnoreCase(filterId));
             if (matchesFilter
@@ -5756,7 +5756,7 @@ public class RdsService implements Resettable, ResourceProvider {
         if (reference == null || reference.isBlank()) {
             throw new AwsException("InvalidParameterValue", "DBClusterIdentifier is required.", 400);
         }
-        if (reference.startsWith("arn:")) {
+        if (AwsArnUtils.isArn(reference)) {
             DbCluster cluster = findClusterByArn(accountId, reference);
             if (cluster == null) {
                 throw new AwsException("DBClusterNotFoundFault", "DB cluster " + reference + " not found.", 404);
