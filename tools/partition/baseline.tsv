@@ -19,12 +19,9 @@ arn-probe	src/main/java/io/github/hectorvent/floci/services/appsync/graphql/reso
 arn-probe	src/main/java/io/github/hectorvent/floci/services/batch/BatchService.java	4
 arn-probe	src/main/java/io/github/hectorvent/floci/services/bedrock/BedrockService.java	3
 arn-probe	src/main/java/io/github/hectorvent/floci/services/budgets/BudgetsService.java	1
-arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/CloudFormationService.java	7
-arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/provisioners/BatchCfnProvisioner.java	1
-arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/provisioners/BedrockAgentCoreCfnProvisioner.java	2
+arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/CloudFormationService.java	4
 arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/provisioners/Ec2InstanceCfnProvisioner.java	1
 arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/provisioners/EcsCfnProvisioner.java	1
-arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudformation/provisioners/IamPolicyCfnProvisioner.java	1
 arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudfront/CloudFrontService.java	1
 arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudtrail/CloudTrailService.java	1
 arn-probe	src/main/java/io/github/hectorvent/floci/services/cloudwatch/logs/CloudWatchLogsCrossAccountService.java	1
