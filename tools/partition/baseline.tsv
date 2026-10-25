@@ -4,8 +4,6 @@ arn-concat	src/main/java/io/github/hectorvent/floci/services/appsync/graphql/aut
 arn-concat	src/main/java/io/github/hectorvent/floci/services/controlcatalog/ControlCatalogService.java	1
 arn-concat	src/main/java/io/github/hectorvent/floci/services/dsql/DsqlClusterPolicies.java	1
 arn-concat	src/main/java/io/github/hectorvent/floci/services/ec2/Ec2InstanceCredentials.java	1
-arn-concat	src/main/java/io/github/hectorvent/floci/services/eks/EksAccessEntryService.java	2
-arn-concat	src/main/java/io/github/hectorvent/floci/services/eks/EksAddonService.java	2
 arn-concat	src/main/java/io/github/hectorvent/floci/services/iam/AwsManagedPolicies.java	2
 arn-concat	src/main/java/io/github/hectorvent/floci/services/route53resolver/Route53ResolverService.java	2
 arn-concat	src/main/java/io/github/hectorvent/floci/services/ses/SesService.java	1
@@ -64,11 +62,6 @@ arn-split	src/main/java/io/github/hectorvent/floci/services/bedrockagentcorecont
 arn-split	src/main/java/io/github/hectorvent/floci/services/cloudwatch/dashboards/CloudWatchDashboardsService.java	1
 arn-split	src/main/java/io/github/hectorvent/floci/services/datasync/DataSyncService.java	3
 arn-split	src/main/java/io/github/hectorvent/floci/services/ec2/Ec2InstanceCredentials.java	3
-arn-split	src/main/java/io/github/hectorvent/floci/services/eks/EksAccessEntryService.java	1
-arn-split	src/main/java/io/github/hectorvent/floci/services/eks/EksAddonService.java	3
-arn-split	src/main/java/io/github/hectorvent/floci/services/eks/EksClusterManager.java	4
-arn-split	src/main/java/io/github/hectorvent/floci/services/eks/EksPodIdentityAssociationService.java	2
-arn-split	src/main/java/io/github/hectorvent/floci/services/eks/EksVpcRouteProgramming.java	1
 arn-split	src/main/java/io/github/hectorvent/floci/services/glue/GlueService.java	1
 arn-split	src/main/java/io/github/hectorvent/floci/services/iam/PublicAccessConditions.java	1
 arn-split	src/main/java/io/github/hectorvent/floci/services/kms/KmsJsonHandler.java	1

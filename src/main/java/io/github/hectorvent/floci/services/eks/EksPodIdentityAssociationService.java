@@ -317,24 +317,24 @@ public class EksPodIdentityAssociationService {
      * accepts the same role ARNs through {@link IamService#roleArnMatches}.
      */
     private void validateRoleArn(String roleArn, String fieldName) {
-        String[] arn = roleArn.split(":", 6);
-        if (arn.length != 6 || !"arn".equals(arn[0]) || !arn[1].matches(AwsArnUtils.PARTITION_REGEX)
-                || !"iam".equals(arn[2]) || !arn[3].isEmpty() || !arn[4].matches("[0-9]{12}")
-                || !arn[5].startsWith("role/") || arn[5].startsWith("role/aws-service-role/")
+        AwsArnUtils.Arn arn = AwsArnUtils.isArn(roleArn) ? AwsArnUtils.parse(roleArn) : null;
+        if (arn == null || !arn.partition().matches(AwsArnUtils.PARTITION_REGEX)
+                || !"iam".equals(arn.service()) || !arn.region().isEmpty() || !arn.accountId().matches("[0-9]{12}")
+                || !arn.resource().startsWith("role/") || arn.resource().startsWith("role/aws-service-role/")
                 || roleArn.endsWith("/")) {
             throw invalid(fieldName + " must identify an IAM role");
         }
         String roleName = roleArn.substring(roleArn.lastIndexOf('/') + 1);
-        iam.findRole(arn[4], roleName)
+        iam.findRole(arn.accountId(), roleName)
                 .filter(role -> IamService.roleArnMatches(roleArn, role))
                 .orElseThrow(() -> invalid("IAM role does not exist"));
     }
 
     private static void validateTargetRoleArn(String targetRoleArn) {
-        String[] arn = targetRoleArn.split(":", 6);
-        if (arn.length != 6 || !"arn".equals(arn[0]) || !arn[1].matches(AwsArnUtils.PARTITION_REGEX)
-                || !"iam".equals(arn[2]) || !arn[3].isEmpty() || !arn[4].matches("[0-9]{12}")
-                || !arn[5].startsWith("role/") || targetRoleArn.endsWith("/")) {
+        AwsArnUtils.Arn arn = AwsArnUtils.isArn(targetRoleArn) ? AwsArnUtils.parse(targetRoleArn) : null;
+        if (arn == null || !arn.partition().matches(AwsArnUtils.PARTITION_REGEX)
+                || !"iam".equals(arn.service()) || !arn.region().isEmpty() || !arn.accountId().matches("[0-9]{12}")
+                || !arn.resource().startsWith("role/") || targetRoleArn.endsWith("/")) {
             throw invalid("targetRoleArn must identify an IAM role");
         }
     }

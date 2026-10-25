@@ -436,11 +436,8 @@ public class EksAddonService {
                 PodIdentityAssociation created = podIdentityAssociations.create(cluster, req);
                 arns.add(created.associationArn());
             } else {
-                String[] clusterArn = cluster.getArn().split(":", 6);
                 String assocId = "a-" + UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-                String arn = "arn:" + clusterArn[1] + ":eks:" + clusterArn[3] + ":"
-                        + clusterArn[4] + ":podidentityassociation/" + cluster.getName() + "/" + assocId;
-                arns.add(arn);
+                arns.add(childArn(cluster, "podidentityassociation/" + cluster.getName() + "/" + assocId));
             }
         }
         return arns;
@@ -467,9 +464,14 @@ public class EksAddonService {
     }
 
     private static String generateAddonArn(Cluster cluster, String addonName) {
-        String[] clusterArn = cluster.getArn().split(":", 6);
-        return "arn:" + clusterArn[1] + ":eks:" + clusterArn[3] + ":"
-                + clusterArn[4] + ":addon/" + cluster.getName() + "/" + addonName + "/" + UUID.randomUUID();
+        return childArn(cluster, "addon/" + cluster.getName() + "/" + addonName + "/" + UUID.randomUUID());
+    }
+
+    /** An EKS resource in the cluster's partition, region and account. */
+    private static String childArn(Cluster cluster, String resource) {
+        AwsArnUtils.Arn clusterArn = AwsArnUtils.parse(cluster.getArn());
+        return new AwsArnUtils.Arn(clusterArn.partition(), "eks", clusterArn.region(), clusterArn.accountId(), resource)
+                .toString();
     }
 
     private static void requireActiveCluster(Cluster cluster) {
@@ -486,16 +488,16 @@ public class EksAddonService {
         if (roleArn == null || roleArn.isBlank()) {
             throw new AwsException("InvalidParameterException", fieldName + " is required", 400);
         }
-        String[] arn = roleArn.split(":", 6);
-        if (arn.length != 6 || !"arn".equals(arn[0]) || !arn[1].matches(AwsArnUtils.PARTITION_REGEX)
-                || !"iam".equals(arn[2]) || !arn[3].isEmpty() || !arn[4].matches("[0-9]{12}")
-                || !arn[5].startsWith("role/") || arn[5].startsWith("role/aws-service-role/")
+        AwsArnUtils.Arn arn = AwsArnUtils.isArn(roleArn) ? AwsArnUtils.parse(roleArn) : null;
+        if (arn == null || !arn.partition().matches(AwsArnUtils.PARTITION_REGEX)
+                || !"iam".equals(arn.service()) || !arn.region().isEmpty() || !arn.accountId().matches("[0-9]{12}")
+                || !arn.resource().startsWith("role/") || arn.resource().startsWith("role/aws-service-role/")
                 || roleArn.endsWith("/")) {
             throw new AwsException("InvalidParameterException", fieldName + " must identify an IAM role", 400);
         }
         if (iam != null) {
             String roleName = roleArn.substring(roleArn.lastIndexOf('/') + 1);
-            iam.findRole(arn[4], roleName)
+            iam.findRole(arn.accountId(), roleName)
                     .filter(role -> IamService.roleArnMatches(roleArn, role))
                     .orElseThrow(() -> new AwsException("InvalidParameterException", "Role not found: " + roleArn, 400));
         }

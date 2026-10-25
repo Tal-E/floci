@@ -1950,11 +1950,9 @@ public class EksClusterManager
             if (cluster.getAccountId() != null && !cluster.getAccountId().isBlank()) {
                 return cluster.getAccountId();
             }
-            if (cluster.getArn() != null) {
-                String[] parts = cluster.getArn().split(":");
-                if (parts.length > 4 && !parts[4].isBlank()) {
-                    return parts[4];
-                }
+            String accountId = AwsArnUtils.accountOrDefault(cluster.getArn(), null);
+            if (accountId != null && !accountId.isBlank()) {
+                return accountId;
             }
         }
         if (regionResolver != null && regionResolver.getAccountId() != null && !regionResolver.getAccountId().isBlank()) {
@@ -2349,7 +2347,7 @@ public class EksClusterManager
         // client-go replaces a server URL query when constructing its TokenReview request.
         String accountId = cluster.getAccountId() != null && !cluster.getAccountId().isBlank()
                 ? cluster.getAccountId()
-                : (cluster.getArn() != null && cluster.getArn().split(":", 6).length > 4 ? cluster.getArn().split(":", 6)[4] : "000000000000");
+                : AwsArnUtils.accountOrDefault(cluster.getArn(), "000000000000");
         String region = AwsArnUtils.regionOrDefault(cluster.getArn(), defaultRegion);
         Instant createdAt = cluster.getCreatedAt() != null ? cluster.getCreatedAt() : Instant.EPOCH;
         return webhookPath(cluster.getName()) + "/scope/" + accountId
@@ -2646,11 +2644,9 @@ public class EksClusterManager
     }
 
     String clusterRegion(Cluster cluster) {
-        if (cluster != null && cluster.getArn() != null) {
-            String[] parts = cluster.getArn().split(":");
-            if (parts.length > 3 && !parts[3].isBlank()) {
-                return parts[3];
-            }
+        String region = cluster == null ? null : AwsArnUtils.regionOrDefault(cluster.getArn(), null);
+        if (region != null && !region.isBlank()) {
+            return region;
         }
         if (regionResolver != null && regionResolver.getDefaultRegion() != null && !regionResolver.getDefaultRegion().isBlank()) {
             return regionResolver.getDefaultRegion();
